@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Dark Mode Flashcards</title>
+    <style>
+        /* --- NOTION DARK MODE TOKENS & TYPOGRAPHY --- */
+        :root {
+            --bg-main: #191919;
+            --bg-surface: #202020;
+            --bg-hover: #2C2C2C;
+            --bg-active: #373737;
+            --border: #2D2D2D;
+            --text-main: rgba(255, 255, 255, 0.9);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            
+            /* Status Colors */
+            --c-red-bg: #3C1E1E; --c-red-txt: #E05252; --c-red-brd: #522828;
+            --c-amb-bg: #3D321A; --c-amb-txt: #E2B93B; --c-amb-brd: #524322;
+            --c-grn-bg: #1C3B2B; --c-grn-txt: #4EAD73; --c-grn-brd: #265239;
+            --c-wht-bg: #2A2A2A; --c-wht-txt: #9B9B9B; --c-wht-brd: #373737;
+            
+            /* Font Stack */
+            --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body, html {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* --- GLOBAL UI COMPONENTS --- */
+        button {
+            background: transparent; color: var(--text-main); font-family: var(--font-mono);
+            border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px;
+            cursor: pointer; font-size: 12px; transition: 0.15s ease;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        button:hover { background: var(--bg-hover); }
+        button:active { background: var(--bg-active); }
+        
+        select, input, textarea {
+            background: var(--bg-main); color: var(--text-main); font-family: var(--font-mono);
+            border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+            font-size: 12px; outline: none; transition: border-color 0.2s;
+        }
+        select:focus, input:focus, textarea:focus { border-color: var(--text-muted); }
+        select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .hidden { display: none !important; }
+        
+        /* Bulletproof Iframe Scrolling Architecture */
+        .view-container { height: 100%; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+        #view-flashcards { overflow: hidden; } /* Locks parent so toolbar stays sticky, list scrolls internally */
+        
+        /* --- TOOLBAR (GRID LAYOUT) --- */
+        #toolbar {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px;
+            position: relative;
+        }
+        
+        .toolbar-grid {
+            display: grid;
+            grid-template-columns: auto auto auto 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 6px 12px;
+            align-items: center;
+        }
+        
+        .btn-home { grid-column: 1; grid-row: 1; }
+        .btn-cards { grid-column: 2; grid-row: 1; }
+        .btn-back { grid-column: 1; grid-row: 2; }
+        .btn-perf { grid-column: 2; grid-row: 2; }
+
+        .filter-subject { grid-column: 3; grid-row: 1; }
+        .filter-rank { grid-column: 3; grid-row: 2; }
+
+        .filter-sec { grid-column: 4; grid-row: 1; }
+        .filter-top { grid-column: 4; grid-row: 2; }
+        .filter-sub { grid-column: 4; grid-row: 3; }
+        
+        .filter-box select { width: 100%; }
+        
+        .nav-icon-btn {
+            width: 32px; height: 32px; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; border: 1px solid var(--border);
+            background: var(--bg-surface); color: var(--text-muted);
+        }
+        .nav-icon-btn:hover { color: var(--text-main); background: var(--bg-hover); }
+        .nav-icon-btn svg { width: 16px; height: 16px; }
+
+        /* Multi-select Dropdown */
+        .multi-select { position: relative; width: 100%; }
+        .multi-select-header {
+            background: var(--bg-main); border: 1px solid var(--border);
+            padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .multi-select-dropdown {
+            position: absolute; top: 100%; left: 0; width: 160px;
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: 6px; z-index: 20; padding: 6px;
+            display: flex; flex-direction: column; gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin-top: 4px;
+        }
+        .multi-select-dropdown label {
+            display: flex; align-items: center; gap: 8px; font-size: 11px; cursor: pointer;
+        }
+
+        /* --- ICONS & BADGES --- */
+        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; border: 1px solid; }
+        .st-red { background: var(--c-red-bg); color: var(--c-red-txt); border-color: var(--c-red-brd); }
+        .st-amb { background: var(--c-amb-bg); color: var(--c-amb-txt); border-color: var(--c-amb-brd); }
+        .st-grn { background: var(--c-grn-bg); color: var(--c-grn-txt); border-color: var(--c-grn-brd); }
+        .st-wht { background: var(--c-wht-bg); color: var(--c-wht-txt); border-color: var(--c-wht-brd); }
+
+        /* --- FLASHCARD STUDY AREA --- */
+        #main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 0; position: relative; }
+        
+        .card-container { perspective: 1000px; width: 100%; max-width: 580px; margin: 12px auto; height: 300px; }
+        .card {
+            width: 100%; height: 100%; position: relative;
+            transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d; cursor: pointer;
+        }
+        .card.flipped { transform: rotateX(180deg); }
+        
+        .card-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px;
+            padding: 24px; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; text-align: center; overflow-y: auto;
+        }
+        .card-back { transform: rotateX(180deg); }
+        
+        .card-meta { position: absolute; top: 12px; left: 12px; font-size: 10px; color: var(--text-muted); text-align: left; max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+        .card-status { position: absolute; top: 12px; right: 12px; }
+        
+        .study-controls { display: flex; justify-content: center; gap: 10px; max-width: 580px; margin: 0 auto; }
+        .rating-btn { padding: 8px 14px; font-size: 12px; border-radius: 4px; border: 1px solid; }
+
+        /* --- VIEW FLASHCARDS PAGE --- */
+        .vf-toolbar {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            padding: 12px; border-bottom: 1px solid var(--border); background: var(--bg-surface);
+        }
+        .search-container {
+            display: flex; align-items: center; gap: 6px; background: var(--bg-main);
+            border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px;
+        }
+        .search-container input[type="text"] { border: none; background: transparent; padding: 2px; width: 140px; }
+        .search-container input[type="text"]:focus { border: none; outline: none; }
+        
+        .vf-list-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .vf-list-item {
+            display: flex; gap: 12px; padding: 12px; border: 1px solid var(--border);
+            border-radius: 6px; background: var(--bg-surface); cursor: pointer;
+            align-items: flex-start; transition: background 0.15s;
+        }
+        .vf-list-item:hover { background: var(--bg-hover); }
+        .vf-item-content { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .vf-item-meta { font-size: 10px; color: var(--text-muted); }
+        .vf-item-date { font-size: 9px; color: var(--text-muted); opacity: 0.7; }
+        .vf-item-question { font-size: 12px; margin-top: 6px; color: var(--text-main); }
+
+        .floating-actions {
+            position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100;
+        }
+        .btn-danger { background: var(--c-red-bg); color: var(--c-red-txt); border-color: var(--c-red-brd); font-weight: bold; padding: 10px 16px; border-radius: 20px;}
+        .btn-primary { background: var(--text-main); color: var(--bg-main); font-weight: bold; padding: 10px 16px; border-radius: 20px;}
+
+        /* --- CREATE / EDIT CARD FORM --- */
+        .header-with-back { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg-surface); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 6px; font-weight: bold; letter-spacing: 0.5px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; }
+        .form-group textarea { height: 80px; resize: vertical; }
+
+        /* Custom Select */
+        .custom-select-wrapper { position: relative; width: 100%; }
+        .custom-select-display { 
+            background: var(--bg-main); border: 1px solid var(--border); 
+            padding: 6px 10px; border-radius: 6px; cursor: pointer; 
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; transition: border-color 0.2s;
+        }
+        .custom-select-display:hover { border-color: var(--text-muted); }
+        .custom-select-options {
+            position: absolute; top: 100%; left: 0; right: 0; 
+            background: var(--bg-surface); border: 1px solid var(--border); 
+            border-radius: 6px; z-index: 10; max-height: 180px; overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin-top: 4px;
+        }
+        .cs-option {
+            padding: 8px 10px; display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; font-size: 12px; border-bottom: 1px solid var(--border);
+        }
+        .cs-option:last-child { border-bottom: none; }
+        .cs-option:hover { background: var(--bg-hover); }
+        .cs-bin { color: var(--text-muted); padding: 2px 6px; border-radius: 4px; }
+        .cs-bin:hover { color: var(--c-red-txt); background: var(--c-red-bg); }
+
+        /* --- PERFORMANCE DASHBOARD --- */
+        .perf-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; border: 1px solid var(--border); border-radius: 6px;
+            margin-bottom: 8px; background: var(--bg-surface); cursor: pointer;
+        }
+        .perf-row:hover { background: var(--bg-hover); }
+        .perf-title { font-size: 12px; flex: 1; }
+        
+        .progress-bar-container { width: 120px; display: flex; align-items: center; gap: 8px; }
+        .progress-bar {
+            flex: 1; height: 8px; display: flex; border-radius: 4px; overflow: hidden; background: var(--bg-active);
+        }
+        .seg-grn { background: var(--c-grn-txt); }
+        .seg-amb { background: var(--c-amb-txt); }
+        .seg-red { background: var(--c-red-txt); }
+        .seg-wht { background: var(--c-wht-txt); }
+        .progress-text { font-size: 10px; color: var(--text-muted); width: 28px; text-align: right; }
+
+        .topic-children { padding-left: 16px; border-left: 1px solid var(--border); margin: 4px 0 12px 8px; }
+        .subtopic-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 10px; font-size: 11px; color: var(--text-main);
+        }
+        .subtopic-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;}
+        .subtopic-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; align-items: center;}
+
+        #fab-start {
+            position: fixed; bottom: 20px; right: 20px; background: var(--text-main); color: var(--bg-main);
+            padding: 10px 18px; border-radius: 20px; font-weight: bold; font-size: 12px; border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 100; display: none; cursor: pointer;
+        }
+        #fab-start:hover { background: #fff; transform: translateY(-2px); }
+
+    </style>
+</head>
+<body>
+
+    <!-- TOOLBAR (Main Dashboard) -->
+    <div id="toolbar">
+        <div class="toolbar-grid">
+            <!-- Buttons -->
+            <button class="btn-home nav-icon-btn" onclick="goHome()" title="Home">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </button>
+            <button class="btn-cards nav-icon-btn" onclick="switchView('flashcards')" title="View Flashcards">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2" ry="2"></rect><line x1="3" y1="7" x2="21" y2="7"></line><rect x="7" y="11" width="10" height="10" rx="2" ry="2"></rect></svg>
+            </button>
+            <button class="btn-back nav-icon-btn" onclick="goBack()" title="Go Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <button class="btn-perf nav-icon-btn" onclick="switchView('performance')" title="Performance">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </button>
+            
+            <!-- Subject & Rank -->
+            <div class="filter-box filter-subject">
+                <select id="filter-subject" onchange="handleSubjectChange()">
+                    <option value="All Subjects">All Subjects</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Psychology">Psychology</option>
+                    <option value="Economics">Economics</option>
+                </select>
+            </div>
+            <div class="filter-box filter-rank">
+                <div class="multi-select" id="rank-filter-container">
+                    <div class="multi-select-header" onclick="toggleRankDropdown()">
+                        <span>Select Ranks</span>
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div class="multi-select-dropdown hidden" id="rank-dropdown">
+                        <label><input type="checkbox" value="red" checked onchange="buildStudyQueue()"> 🔴 Hard</label>
+                        <label><input type="checkbox" value="amber" checked onchange="buildStudyQueue()"> 🟡 OK</label>
+                        <label><input type="checkbox" value="green" checked onchange="buildStudyQueue()"> 🟢 Easy</label>
+                        <label><input type="checkbox" value="unrated" checked onchange="buildStudyQueue()"> ⚪ Unrated</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sec, Top, Sub -->
+            <div class="filter-box filter-sec">
+                <select id="filter-section" onchange="handleSectionFilterChange()"><option value="all">All Sections</option></select>
+            </div>
+            <div class="filter-box filter-top">
+                <select id="filter-topic" onchange="handleTopicFilterChange()" disabled><option value="all">All Topics</option></select>
+            </div>
+            <div class="filter-box filter-sub">
+                <select id="filter-subtopic" onchange="buildStudyQueue()" disabled><option value="all">All Subtopics</option></select>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <div id="main-content">
+        
+        <!-- 1. STUDY VIEW -->
+        <div id="view-study" class="view-container" style="padding: 16px;">
+            <div id="study-stats" style="text-align: center; font-size: 11px; color: var(--text-muted); margin-bottom: 8px;"></div>
+            
+            <div class="card-container" id="flashcard-container" onclick="flipCard(event)">
+                <div class="card" id="flashcard">
+                    <div class="card-face">
+                        <div class="card-meta" id="card-front-meta"></div>
+                        <div class="card-status" id="card-front-status"></div>
+                        <div id="card-question" style="font-size: 15px; width: 100%;">Loading flashcards...</div>
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="card-meta" id="card-back-meta"></div>
+                        <div id="card-answer" style="font-size: 13px; text-align: left; width: 100%; white-space: pre-wrap;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="study-controls hidden" id="rating-controls">
+                <button class="rating-btn st-red" onclick="rateCard('red')">🔴 Hard (1)</button>
+                <button class="rating-btn st-amb" onclick="rateCard('amber')">🟡 OK (2)</button>
+                <button class="rating-btn st-grn" onclick="rateCard('green')">🟢 Easy (3)</button>
+                <button class="rating-btn st-wht" onclick="skipCard()">Skip ➔</button>
+            </div>
+        </div>
+
+        <!-- 2. VIEW FLASHCARDS PAGE -->
+        <div id="view-flashcards" class="view-container hidden">
+            <div class="vf-toolbar">
+                <button class="nav-icon-btn" onclick="goHome()" title="Home">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                </button>
+                <button class="nav-icon-btn" onclick="goBack()" title="Go Back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                </button>
+                
+                <select id="vf-filter-subject" onchange="handleVfFilters()">
+                    <option value="All Subjects">All Subjects</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Psychology">Psychology</option>
+                    <option value="Economics">Economics</option>
+                </select>
+                <select id="vf-filter-section" onchange="handleVfFilters()"><option value="all">All Sections</option></select>
+                <select id="vf-filter-topic" onchange="handleVfFilters()"><option value="all">All Topics</option></select>
+                <select id="vf-filter-subtopic" onchange="handleVfFilters()"><option value="all">All Subtopics</option></select>
+                
+                <div class="search-container">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color:var(--text-muted)"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="vf-search" placeholder="Search..." oninput="handleVfFilters()">
+                    <input type="checkbox" id="vf-search-qa" title="Search inside Question & Answer" onchange="handleVfFilters()">
+                </div>
+                
+                <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" id="vf-show-q" onchange="renderVfList()"> Show Qs
+                </label>
+                
+                <button class="nav-icon-btn" onclick="goToCreate()" title="Add New Flashcard" style="margin-left: auto;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+            </div>
+            
+            <div id="vf-list" class="vf-list-container"></div>
+            
+            <div id="vf-actions" class="floating-actions hidden">
+                <button onclick="deleteSelectedVfCards()" class="btn-danger">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Delete Selected
+                </button>
+                <button onclick="startRevisionFromVf()" class="btn-primary">▶️ Start Revision</button>
+            </div>
+        </div>
+
+        <!-- 3. CREATE / EDIT CARD VIEW -->
+        <div id="view-create" class="view-container hidden">
+            <div class="header-with-back">
+                <div style="display:flex; gap:8px;">
+                    <button class="nav-icon-btn" onclick="goHome()" title="Home">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    </button>
+                    <button class="nav-icon-btn" onclick="goBack()" title="Go Back">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    </button>
+                </div>
+                <h3 id="create-title" style="font-size: 14px; font-weight: 600;">Add New Flashcard</h3>
+                <div style="display:flex; gap:8px; margin-left:auto; align-items: center;">
+                    <span id="create-msg" style="font-size: 11px; margin-right: 8px;"></span>
+                    <button id="btn-delete-card" class="nav-icon-btn hidden" onclick="deleteCurrentCard()" title="Delete Card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                    <button id="btn-save-card" class="nav-icon-btn" onclick="saveCard()" title="Save Card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div style="max-width: 600px; margin: 0 auto; width: 100%; padding: 16px;">
+                <div class="form-group">
+                    <label>SUBJECT</label>
+                    <select id="create-subject" onchange="populateCustomSelect('sec'); populateCustomSelect('top'); populateCustomSelect('sub');">
+                        <option value="Biology">Biology</option>
+                        <option value="Psychology">Psychology</option>
+                        <option value="Economics">Economics</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>SECTION</label>
+                    <div class="custom-select-wrapper">
+                        <div class="custom-select-display" id="cs-sec-display" onclick="toggleDropdown('cs-sec')">
+                            <span id="cs-sec-val">Select sec...</span>
+                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="custom-select-options hidden" id="cs-sec-options"></div>
+                        <input type="text" id="cs-sec-new" class="hidden" placeholder="Type new section..." oninput="handleCustomInput('sec')">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>TOPIC</label>
+                    <div class="custom-select-wrapper">
+                        <div class="custom-select-display" id="cs-top-display" onclick="toggleDropdown('cs-top')">
+                            <span id="cs-top-val">Select top...</span>
+                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="custom-select-options hidden" id="cs-top-options"></div>
+                        <input type="text" id="cs-top-new" class="hidden" placeholder="Type new topic..." oninput="handleCustomInput('top')">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>SUBTOPIC</label>
+                    <div class="custom-select-wrapper">
+                        <div class="custom-select-display" id="cs-sub-display" onclick="toggleDropdown('cs-sub')">
+                            <span id="cs-sub-val">Select sub...</span>
+                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </div>
+                        <div class="custom-select-options hidden" id="cs-sub-options"></div>
+                        <input type="text" id="cs-sub-new" class="hidden" placeholder="Type new subtopic...">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>QUESTION / CONCEPT (FRONT)</label>
+                    <textarea id="create-q" placeholder="What is the function of..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>ANSWER / DETAIL (BACK)</label>
+                    <textarea id="create-a" placeholder="- Point 1&#10;- Point 2"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. PERFORMANCE DASHBOARD -->
+        <div id="view-performance" class="view-container hidden">
+            <div class="header-with-back">
+                <div style="display:flex; gap:8px;">
+                    <button class="nav-icon-btn" onclick="goHome()" title="Home">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    </button>
+                    <button class="nav-icon-btn" onclick="goBack()" title="Go Back">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    </button>
+                </div>
+                <h3 id="perf-title" style="font-size: 14px; font-weight: 600;">Performance Overview</h3>
+                <select id="perf-subject" onchange="renderPerformanceLevel1()" style="margin-left:auto; width: 140px;">
+                    <option value="All Subjects">All Subjects</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Psychology">Psychology</option>
+                    <option value="Economics">Economics</option>
+                </select>
+            </div>
+            <div id="perf-content" style="padding: 16px;">
+                <!-- Dynamically populated sections/topics -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Floating Action Button for Custom Multi-Select Revision -->
+    <button id="fab-start" onclick="startCustomRevision()">Start Revision (<span id="fab-count">0</span>)</button>
+
+    <!-- ================= FIREBASE & APP LOGIC ================= -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+        // ======================================================================
+        // PASTE YOUR FIREBASE CONFIGURATION HERE
+        // ======================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEG5FVSsfzFmzH8f5QyqDgoUW9jOV3hdU",
+            authDomain: "notion-flashcards.firebaseapp.com",
+            projectId: "notion-flashcards",
+            storageBucket: "notion-flashcards.firebasestorage.app",
+            messagingSenderId: "1095377565048",
+            appId: "1:1095377565048:web:45aa4439dd43d5cd17448d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- GLOBAL STATE ---
+        let rawAllCards = [];
+        let allCards = [];
+        let studyQueue = [];
+        let sessionHistory = []; 
+        let currentCardIndex = 0;
+        let activeSubject = "All Subjects";
+        
+        let customSelectionMode = false;
+        let selectedSubtopics = new Set();
+        let isStudying = false; 
+        
+        let historyStack = [];
+        let currentView = 'main-dashboard';
+        let editingCardId = null;
+        let hiddenCategories = JSON.parse(localStorage.getItem('hiddenCategories') || '[]');
+
+        // Detect URL Hash or Default Subject
+        const hashSubject = window.location.hash.substring(1);
+        if (hashSubject) {
+            const formattedHash = hashSubject.charAt(0).toUpperCase() + hashSubject.slice(1).toLowerCase();
+            if (["Biology", "Psychology", "Economics"].includes(formattedHash)) {
+                activeSubject = formattedHash;
+            }
+        }
+        document.getElementById('filter-subject').value = activeSubject;
+
+        // --- FIREBASE REAL-TIME LISTENER ---
+        const cardsRef = collection(db, "flashcards");
+        onSnapshot(cardsRef, (snapshot) => {
+            rawAllCards = [];
+            snapshot.forEach((doc) => {
+                rawAllCards.push({ id: doc.id, ...doc.data() });
+            });
+            
+            if (activeSubject === 'All Subjects') {
+                allCards = [...rawAllCards];
+            } else {
+                allCards = rawAllCards.filter(c => c.subject === activeSubject);
+            }
+            
+            updateFilterDropdowns();
+            
+            if (!isStudying) {
+                buildStudyQueue();
+            }
+            
+            if (currentView === 'flashcards') {
+                populateVfFilters();
+                renderVfList();
+            }
+        }, (error) => {
+            console.error("Firebase Read Error.", error);
+            document.getElementById('card-question').innerText = "Database connection error.";
+        });
+
+        // --- NAVIGATION LOGIC ---
+        window.goHome = () => {
+            if (currentView === 'main-dashboard') {
+                document.getElementById('filter-subject').value = 'All Subjects';
+                document.querySelectorAll('#rank-dropdown input').forEach(cb => cb.checked = true);
+                document.getElementById('filter-section').value = 'all';
+                document.getElementById('filter-topic').value = 'all';
+                document.getElementById('filter-subtopic').value = 'all';
+                handleSubjectChange();
+            } else {
+                switchView('main-dashboard');
+            }
+        };
+
+        window.goBack = () => {
+            if (historyStack.length > 0) {
+                const prevView = historyStack.pop();
+                switchViewInternal(prevView, false);
+            }
+        };
+
+        window.switchView = (viewName) => {
+            if (currentView !== viewName) {
+                historyStack.push(currentView);
+            }
+            switchViewInternal(viewName, true);
+        };
+
+        window.switchViewInternal = (viewName, isNew) => {
+            currentView = viewName;
+            ['view-study', 'view-create', 'view-performance', 'view-flashcards'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            document.getElementById('fab-start').style.display = 'none';
+
+            if(viewName === 'main-dashboard') {
+                document.getElementById('view-study').classList.remove('hidden');
+                document.getElementById('toolbar').style.display = 'block';
+                buildStudyQueue();
+            } else {
+                document.getElementById('toolbar').style.display = 'none';
+                const viewEl = document.getElementById(`view-${viewName}`);
+                if (viewEl) viewEl.classList.remove('hidden');
+                
+                if(viewName === 'performance') renderPerformanceLevel1();
+                if(viewName === 'flashcards') {
+                    populateVfFilters();
+                    renderVfList();
+                }
+            }
+        };
+
+        // --- MAIN DASHBOARD FILTERS ---
+        window.handleSubjectChange = () => {
+            const subj = document.getElementById('filter-subject').value;
+            activeSubject = subj;
+            if (subj === 'All Subjects') {
+                allCards = [...rawAllCards];
+            } else {
+                allCards = rawAllCards.filter(c => c.subject === subj);
+            }
+            updateFilterDropdowns();
+            buildStudyQueue(true);
+        };
+
+        function updateFilterDropdowns() {
+            const secSelect = document.getElementById('filter-section');
+            const currentVal = secSelect.value;
+            const sections = [...new Set(allCards.map(c => c.section))].sort();
+            
+            secSelect.innerHTML = '<option value="all">All Sections</option>';
+            sections.forEach(s => secSelect.innerHTML += `<option value="${s}">${s}</option>`);
+            if(sections.includes(currentVal)) secSelect.value = currentVal;
+            else secSelect.value = 'all';
+            
+            handleSectionFilterChange();
+        }
+
+        window.handleSectionFilterChange = () => {
+            const sec = document.getElementById('filter-section').value;
+            const topSelect = document.getElementById('filter-topic');
+            const subSelect = document.getElementById('filter-subtopic');
+            const currentTop = topSelect.value;
+            
+            if(sec === 'all') {
+                topSelect.disabled = true; topSelect.value = 'all';
+                subSelect.disabled = true; subSelect.value = 'all';
+            } else {
+                topSelect.disabled = false;
+                const topics = [...new Set(allCards.filter(c => c.section === sec).map(c => c.topic))].sort();
+                topSelect.innerHTML = '<option value="all">All Topics</option>';
+                topics.forEach(t => topSelect.innerHTML += `<option value="${t}">${t}</option>`);
+                if (topics.includes(currentTop)) topSelect.value = currentTop;
+                else topSelect.value = 'all';
+                
+                subSelect.disabled = true; subSelect.value = 'all';
+            }
+            handleTopicFilterChange();
+        };
+
+        window.handleTopicFilterChange = () => {
+            const sec = document.getElementById('filter-section').value;
+            const top = document.getElementById('filter-topic').value;
+            const subSelect = document.getElementById('filter-subtopic');
+            const currentSub = subSelect.value;
+            
+            if(top === 'all') {
+                subSelect.disabled = true; subSelect.value = 'all';
+            } else {
+                subSelect.disabled = false;
+                const subtopics = [...new Set(allCards.filter(c => c.section === sec && c.topic === top).map(c => c.subtopic))].sort();
+                subSelect.innerHTML = '<option value="all">All Subtopics</option>';
+                subtopics.forEach(s => subSelect.innerHTML += `<option value="${s}">${s}</option>`);
+                if (subtopics.includes(currentSub)) subSelect.value = currentSub;
+                else subSelect.value = 'all';
+            }
+            buildStudyQueue();
+        };
+
+        function getSelectedRanks() {
+            const checkboxes = document.querySelectorAll('#rank-dropdown input:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        window.toggleRankDropdown = () => {
+            document.getElementById('rank-dropdown').classList.toggle('hidden');
+        };
+
+        // --- STUDY QUEUE & UI LOGIC ---
+        window.buildStudyQueue = (forceReset = false) => {
+            const fSec = document.getElementById('filter-section').value;
+            const fTop = document.getElementById('filter-topic').value;
+            const fSub = document.getElementById('filter-subtopic').value;
+            const selectedRanks = getSelectedRanks();
+
+            const newQueue = allCards.filter(c => {
+                if(fSec !== 'all' && c.section !== fSec) return false;
+                if(fTop !== 'all' && c.topic !== fTop) return false;
+                if(fSub !== 'all' && c.subtopic !== fSub) return false;
+                
+                const st = c.status || 'unrated';
+                if(!selectedRanks.includes(st)) return false;
+                return true;
+            });
+            
+            const newQueueIds = newQueue.map(c => c.id).join(',');
+            const oldQueueIds = studyQueue.map(c => c.id).join(',');
+            
+            if (newQueueIds !== oldQueueIds || forceReset) {
+                studyQueue = newQueue;
+                currentCardIndex = 0;
+                sessionHistory = [];
+            }
+            
+            customSelectionMode = false;
+            isStudying = false;
+            if (currentView === 'main-dashboard') {
+                document.getElementById('toolbar').style.display = 'block';
+                renderCurrentCard();
+            }
+        };
+
+        function renderCurrentCard() {
+            const qEl = document.getElementById('card-question');
+            const aEl = document.getElementById('card-answer');
+            const stats = document.getElementById('study-stats');
+            const cardEl = document.getElementById('flashcard');
+            const controls = document.getElementById('rating-controls');
+            
+            cardEl.classList.remove('flipped');
+            
+            if(studyQueue.length === 0) {
+                qEl.innerText = "No flashcards match these filters.";
+                aEl.innerText = "";
+                stats.innerText = "0 of 0";
+                controls.classList.add('hidden');
+                document.getElementById('card-front-meta').innerText = "";
+                document.getElementById('card-front-status').className = "card-status";
+                document.getElementById('card-front-status').innerText = "";
+                return;
+            }
+
+            if(currentCardIndex >= studyQueue.length) {
+                const hardCount = sessionHistory.filter(i => i.rating === 'red').length;
+                const hardOkSkippedCount = sessionHistory.filter(i => ['red', 'amber', 'skipped'].includes(i.rating)).length;
+                
+                qEl.innerHTML = `
+                    <div style="text-align: center; width: 100%;">
+                        <h2 style="font-size: 18px; margin-bottom: 6px;">Session Complete! 🎉</h2>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 16px;">What would you like to review?</p>
+                        <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 320px; margin: 0 auto;">
+                            <button onclick="event.stopPropagation(); reviewSessionCards('hard')" style="background: var(--c-red-bg); color: var(--c-red-txt); border: 1px solid var(--c-red-brd); padding: 8px 12px; font-weight: bold; width: 100%;">
+                                🔴 Review Hard Cards (${hardCount})
+                            </button>
+                            <button onclick="event.stopPropagation(); reviewSessionCards('hard_ok_skipped')" style="background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border); padding: 8px 12px; font-weight: bold; width: 100%;">
+                                🔄 Review Hard, OK & Skipped (${hardOkSkippedCount})
+                            </button>
+                        </div>
+                    </div>
+                `;
+                aEl.innerText = "";
+                stats.innerText = `Completed ${studyQueue.length} of ${studyQueue.length}`;
+                controls.classList.add('hidden');
+                document.getElementById('card-front-meta').innerText = "";
+                document.getElementById('card-front-status').className = "card-status";
+                document.getElementById('card-front-status').innerText = "";
+                return;
+            }
+
+            const card = studyQueue[currentCardIndex];
+            stats.innerText = `Card ${currentCardIndex + 1} of ${studyQueue.length}`;
+            qEl.innerText = card.question;
+            aEl.innerText = card.answer;
+            
+            document.getElementById('card-front-meta').innerText = `${card.subject} > ${card.section} > ${card.topic} > ${card.subtopic}`;
+            document.getElementById('card-back-meta').innerText = `${card.subtopic}`;
+            
+            const badge = document.getElementById('card-front-status');
+            const stat = card.status || 'unrated';
+            badge.className = `card-status status-badge st-${stat === 'red' ? 'red' : stat === 'amber' ? 'amb' : stat === 'green' ? 'grn' : 'wht'}`;
+            badge.innerText = stat.toUpperCase();
+            
+            controls.classList.add('hidden');
+        }
+
+        window.flipCard = (event) => {
+            if(studyQueue.length === 0 || currentCardIndex >= studyQueue.length) return;
+            if(event && event.target.tagName === 'BUTTON') return;
+            
+            const card = document.getElementById('flashcard');
+            card.classList.toggle('flipped');
+            
+            if(card.classList.contains('flipped')) {
+                document.getElementById('rating-controls').classList.remove('hidden');
+            } else {
+                document.getElementById('rating-controls').classList.add('hidden');
+            }
+        };
+
+        window.rateCard = async (status) => {
+            if (studyQueue.length === 0 || currentCardIndex >= studyQueue.length) return;
+            
+            isStudying = true;
+            const card = studyQueue[currentCardIndex];
+            sessionHistory.push({ card: card, rating: status });
+            
+            const cardRef = doc(db, "flashcards", card.id);
+            const newViews = (card.views || 0) + 1;
+            card.status = status;
+            card.views = newViews;
+            
+            updateDoc(cardRef, { status: status, views: newViews, lastReviewed: new Date().toISOString() })
+                .catch(e => console.error("Update failed", e));
+            
+            currentCardIndex++;
+            renderCurrentCard();
+        };
+
+        window.skipCard = () => {
+            if (studyQueue.length === 0 || currentCardIndex >= studyQueue.length) return;
+            isStudying = true;
+            sessionHistory.push({ card: studyQueue[currentCardIndex], rating: 'skipped' });
+            currentCardIndex++;
+            renderCurrentCard();
+        };
+
+        window.reviewSessionCards = (type) => {
+            let filteredItems = [];
+            if (type === 'hard') {
+                filteredItems = sessionHistory.filter(i => i.rating === 'red');
+            } else if (type === 'hard_ok_skipped') {
+                filteredItems = sessionHistory.filter(i => ['red', 'amber', 'skipped'].includes(i.rating));
+            }
+
+            if (filteredItems.length === 0) {
+                alert("No cards match this criteria from your completed session.");
+                return;
+            }
+
+            studyQueue = filteredItems.map(i => i.card);
+            sessionHistory = [];
+            currentCardIndex = 0;
+            isStudying = true;
+            renderCurrentCard();
+        };
+
+        document.addEventListener('keydown', (e) => {
+            const view = document.getElementById('view-study');
+            if(view.classList.contains('hidden')) return;
+            
+            if(e.code === 'Space') { e.preventDefault(); flipCard(); }
+            if(document.getElementById('flashcard').classList.contains('flipped')) {
+                if(e.key === '1') rateCard('red');
+                if(e.key === '2') rateCard('amber');
+                if(e.key === '3') rateCard('green');
+            } else {
+                if(e.key === 'ArrowRight') { e.preventDefault(); skipCard(); }
+                if(e.key === 'ArrowLeft' && currentCardIndex > 0 && currentCardIndex < studyQueue.length) {
+                    currentCardIndex--; renderCurrentCard();
+                }
+            }
+        });
+
+        // --- VIEW FLASHCARDS PAGE LOGIC ---
+        window.populateVfFilters = () => {
+            const subj = document.getElementById('vf-filter-subject').value;
+            const sec = document.getElementById('vf-filter-section').value;
+            const top = document.getElementById('vf-filter-topic').value;
+            
+            const cards = subj === 'All Subjects' ? rawAllCards : rawAllCards.filter(c => c.subject === subj);
+            
+            const sections = ['all', ...new Set(cards.map(c => c.section))].sort();
+            const topics = ['all', ...new Set(cards.filter(c => sec === 'all' || c.section === sec).map(c => c.topic))].sort();
+            const subtopics = ['all', ...new Set(cards.filter(c => (sec === 'all' || c.section === sec) && (top === 'all' || c.topic === top)).map(c => c.subtopic))].sort();
+            
+            const updateSelect = (id, options, currentVal) => {
+                const el = document.getElementById(id);
+                el.innerHTML = options.map(o => `<option value="${o}">${o === 'all' ? 'All ' + id.split('-')[2] + 's' : o}</option>`).join('');
+                if (options.includes(currentVal)) el.value = currentVal;
+                else el.value = 'all';
+            };
+            
+            updateSelect('vf-filter-section', sections, sec);
+            updateSelect('vf-filter-topic', topics, top);
+            updateSelect('vf-filter-subtopic', subtopics, document.getElementById('vf-filter-subtopic').value);
+        };
+
+        window.handleVfFilters = () => {
+            populateVfFilters();
+            renderVfList();
+        };
+
+        window.renderVfList = () => {
+            const container = document.getElementById('vf-list');
+            const showQ = document.getElementById('vf-show-q').checked;
+            const searchStr = document.getElementById('vf-search').value.toLowerCase();
+            const searchQA = document.getElementById('vf-search-qa').checked;
+            
+            const fSubj = document.getElementById('vf-filter-subject').value;
+            const fSec = document.getElementById('vf-filter-section').value;
+            const fTop = document.getElementById('vf-filter-topic').value;
+            const fSub = document.getElementById('vf-filter-subtopic').value;
+            
+            let filtered = rawAllCards.filter(c => {
+                if (fSubj !== 'All Subjects' && c.subject !== fSubj) return false;
+                if (fSec !== 'all' && c.section !== fSec) return false;
+                if (fTop !== 'all' && c.topic !== fTop) return false;
+                if (fSub !== 'all' && c.subtopic !== fSub) return false;
+                
+                if (searchStr) {
+                    if (searchQA) {
+                        if (!c.question.toLowerCase().includes(searchStr) && !c.answer.toLowerCase().includes(searchStr)) return false;
+                    } else {
+                        if (!c.subject.toLowerCase().includes(searchStr) && 
+                            !c.section.toLowerCase().includes(searchStr) && 
+                            !c.topic.toLowerCase().includes(searchStr) && 
+                            !c.subtopic.toLowerCase().includes(searchStr)) return false;
+                    }
+                }
+                return true;
+            });
+            
+            let groupCounts = {};
+            let cardNumbers = {};
+            // Safe fallback for missing createdAt timestamps to prevent NaN sorting errors
+            let sortedAsc = [...rawAllCards].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+            sortedAsc.forEach(c => {
+                let key = `${c.subject}-${c.section}-${c.topic}-${c.subtopic}`;
+                if (!groupCounts[key]) groupCounts[key] = 0;
+                groupCounts[key]++;
+                cardNumbers[c.id] = groupCounts[key];
+            });
+            
+            filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            
+            let html = '';
+            filtered.forEach(c => {
+                const dateStr = new Date(c.createdAt || 0).toLocaleString([], {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'});
+                const num = cardNumbers[c.id];
+                html += `
+                <div class="vf-list-item" onclick="editCard('${c.id}')">
+                    <input type="checkbox" class="vf-select-cb" value="${c.id}" onclick="event.stopPropagation(); updateVfSelection()">
+                    <div class="vf-item-content">
+                        <div class="vf-item-meta">(${num}) ${c.subject} > ${c.section} > ${c.topic} > ${c.subtopic}</div>
+                        <div class="vf-item-date">${dateStr}</div>
+                        ${showQ ? `<div class="vf-item-question">${c.question}</div>` : ''}
+                    </div>
+                </div>`;
+            });
+            
+            container.innerHTML = html || '<div style="padding:16px; color:gray; font-size:12px;">No flashcards found.</div>';
+            updateVfSelection();
+        };
+
+        window.updateVfSelection = () => {
+            const checked = document.querySelectorAll('.vf-select-cb:checked').length;
+            const actions = document.getElementById('vf-actions');
+            if (checked > 0) actions.classList.remove('hidden');
+            else actions.classList.add('hidden');
+        };
+
+        window.deleteSelectedVfCards = async () => {
+            const checkboxes = document.querySelectorAll('.vf-select-cb:checked');
+            if (checkboxes.length === 0) return;
+            
+            if (confirm(`Are you sure you want to delete ${checkboxes.length} flashcard(s)?`)) {
+                for (let cb of checkboxes) {
+                    await deleteDoc(doc(db, "flashcards", cb.value));
+                }
+                renderVfList();
+            }
+        };
+
+        window.startRevisionFromVf = () => {
+            const checkboxes = document.querySelectorAll('.vf-select-cb:checked');
+            if (checkboxes.length === 0) return;
+            
+            const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+            studyQueue = rawAllCards.filter(c => selectedIds.includes(c.id));
+            
+            customSelectionMode = true;
+            isStudying = true;
+            currentCardIndex = 0;
+            sessionHistory = [];
+            
+            switchView('main-dashboard');
+            renderCurrentCard();
+        };
+
+        // --- CREATE / EDIT CARD LOGIC ---
+        window.goToCreate = () => {
+            editingCardId = null;
+            document.getElementById('create-title').innerText = "Add New Flashcard";
+            document.getElementById('btn-delete-card').classList.add('hidden');
+            document.getElementById('create-msg').innerText = "";
+            
+            document.getElementById('create-q').value = '';
+            document.getElementById('create-a').value = '';
+            
+            setCustomSelect('sec', '');
+            setCustomSelect('top', '');
+            setCustomSelect('sub', '');
+            
+            switchView('create');
+        };
+
+        window.editCard = (id) => {
+            editingCardId = id;
+            const card = rawAllCards.find(c => c.id === id);
+            
+            document.getElementById('create-title').innerText = "Edit Flashcard";
+            document.getElementById('btn-delete-card').classList.remove('hidden');
+            document.getElementById('create-msg').innerText = "";
+            
+            document.getElementById('create-subject').value = card.subject;
+            
+            setCustomSelect('sec', card.section);
+            setCustomSelect('top', card.topic);
+            setCustomSelect('sub', card.subtopic);
+            
+            document.getElementById('create-q').value = card.question;
+            document.getElementById('create-a').value = card.answer;
+            
+            switchView('create');
+        };
+
+        window.deleteCurrentCard = async () => {
+            if (confirm("Are you sure you want to delete this flashcard?")) {
+                try {
+                    await deleteDoc(doc(db, "flashcards", editingCardId));
+                    goBack();
+                } catch(e) {
+                    alert("Error deleting card.");
+                }
+            }
+        };
+
+        // Custom Select Logic
+        function getAvailableOptions(type, subject, section, topic) {
+            let options = new Set();
+            rawAllCards.forEach(c => {
+                if (c.subject !== subject) return;
+                if (type === 'sec') options.add(c.section);
+                else if (type === 'top') { if (c.section === section) options.add(c.topic); }
+                else if (type === 'sub') { if (c.section === section && c.topic === topic) options.add(c.subtopic); }
+            });
+            return Array.from(options).filter(opt => !hiddenCategories.some(h => h.type === type && h.value === opt)).sort();
+        }
+
+        window.populateCustomSelect = (type) => {
+            const subj = document.getElementById('create-subject').value;
+            const sec = getCustomSelectVal('sec');
+            const top = getCustomSelectVal('top');
+            
+            const options = getAvailableOptions(type, subj, sec, top);
+            const container = document.getElementById(`cs-${type}-options`);
+            
+            let html = `<div class="cs-option" onclick="selectCS('${type}', 'NEW')"><span style="color:var(--c-grn-txt); font-weight:bold;">+ Add New</span></div>`;
+            options.forEach(opt => {
+                html += `
+                <div class="cs-option">
+                    <span style="flex:1" onclick="selectCS('${type}', '${opt.replace(/'/g, "\\'")}')">${opt}</span>
+                    <span class="cs-bin" onclick="hideCSOption('${type}', '${opt.replace(/'/g, "\\'")}', event)">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </span>
+                </div>`;
+            });
+            container.innerHTML = html;
+        };
+
+        window.hideCSOption = (type, val, event) => {
+            event.stopPropagation();
+            if (confirm(`Remove "${val}" from dropdown options? (Existing flashcards won't be deleted)`)) {
+                hiddenCategories.push({type, value: val});
+                localStorage.setItem('hiddenCategories', JSON.stringify(hiddenCategories));
+                populateCustomSelect(type);
+            }
+        };
+
+        window.selectCS = (type, val) => {
+            document.getElementById(`cs-${type}-options`).classList.add('hidden');
+            if (val === 'NEW') {
+                document.getElementById(`cs-${type}-display`).classList.add('hidden');
+                document.getElementById(`cs-${type}-new`).classList.remove('hidden');
+                document.getElementById(`cs-${type}-new`).focus();
+                document.getElementById(`cs-${type}-new`).value = '';
+                document.getElementById(`cs-${type}-val`).innerText = 'NEW';
+            } else {
+                document.getElementById(`cs-${type}-display`).classList.remove('hidden');
+                document.getElementById(`cs-${type}-new`).classList.add('hidden');
+                document.getElementById(`cs-${type}-val`).innerText = val;
+            }
+            
+            if (type === 'sec') { setCustomSelect('top', ''); setCustomSelect('sub', ''); }
+            if (type === 'top') { setCustomSelect('sub', ''); }
+        };
+
+        window.getCustomSelectVal = (type) => {
+            const val = document.getElementById(`cs-${type}-val`).innerText;
+            if (val === 'NEW') return document.getElementById(`cs-${type}-new`).value.trim();
+            return val.startsWith('Select') ? '' : val;
+        };
+
+        window.setCustomSelect = (type, val) => {
+            if (!val) {
+                document.getElementById(`cs-${type}-val`).innerText = `Select ${type}...`;
+                document.getElementById(`cs-${type}-display`).classList.remove('hidden');
+                document.getElementById(`cs-${type}-new`).classList.add('hidden');
+                document.getElementById(`cs-${type}-new`).value = '';
+            } else {
+                const subj = document.getElementById('create-subject').value;
+                const sec = type === 'top' || type === 'sub' ? getCustomSelectVal('sec') : null;
+                const top = type === 'sub' ? getCustomSelectVal('top') : null;
+                const opts = getAvailableOptions(type, subj, sec, top);
+                
+                if (opts.includes(val)) {
+                    document.getElementById(`cs-${type}-val`).innerText = val;
+                    document.getElementById(`cs-${type}-display`).classList.remove('hidden');
+                    document.getElementById(`cs-${type}-new`).classList.add('hidden');
+                } else {
+                    document.getElementById(`cs-${type}-val`).innerText = 'NEW';
+                    document.getElementById(`cs-${type}-display`).classList.add('hidden');
+                    document.getElementById(`cs-${type}-new`).classList.remove('hidden');
+                    document.getElementById(`cs-${type}-new`).value = val;
+                }
+            }
+            populateCustomSelect(type);
+        };
+
+        window.handleCustomInput = (type) => {
+            if (type === 'sec') { setCustomSelect('top', ''); setCustomSelect('sub', ''); }
+            if (type === 'top') { setCustomSelect('sub', ''); }
+        };
+
+        window.toggleDropdown = (id) => {
+            document.querySelectorAll('.custom-select-options').forEach(el => {
+                if (el.id !== `${id}-options`) el.classList.add('hidden');
+            });
+            document.getElementById(`${id}-options`).classList.toggle('hidden');
+        };
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-select-wrapper')) {
+                document.querySelectorAll('.custom-select-options').forEach(el => el.classList.add('hidden'));
+            }
+            if (!e.target.closest('.multi-select')) {
+                document.getElementById('rank-dropdown').classList.add('hidden');
+            }
+        });
+
+        window.saveCard = async () => {
+            const subj = document.getElementById('create-subject').value;
+            const sec = getCustomSelectVal('sec');
+            const top = getCustomSelectVal('top');
+            const sub = getCustomSelectVal('sub');
+            const q = document.getElementById('create-q').value.trim();
+            const a = document.getElementById('create-a').value.trim();
+            const msg = document.getElementById('create-msg');
+            
+            if(!sec || !top || !sub || !q || !a) {
+                msg.innerText = "Error: Fill all fields."; msg.style.color = "var(--c-red-txt)"; return;
+            }
+            
+            msg.innerHTML = "Saving... ⏳"; msg.style.color = "var(--text-muted)";
+            
+            try {
+                if (editingCardId) {
+                    const cardRef = doc(db, "flashcards", editingCardId);
+                    await updateDoc(cardRef, {
+                        subject: subj, section: sec, topic: top, subtopic: sub,
+                        question: q, answer: a
+                    });
+                    msg.innerHTML = "Saved! ✔️"; msg.style.color = "var(--c-grn-txt)";
+                    setTimeout(() => goBack(), 800);
+                } else {
+                    await addDoc(collection(db, "flashcards"), {
+                        subject: subj, section: sec, topic: top, subtopic: sub,
+                        question: q, answer: a, status: "unrated", views: 0,
+                        createdAt: new Date().toISOString()
+                    });
+                    msg.innerHTML = "Saved! ✔️ Add another."; msg.style.color = "var(--c-grn-txt)";
+                    document.getElementById('create-q').value = "";
+                    document.getElementById('create-a').value = "";
+                    document.getElementById('create-q').focus();
+                }
+            } catch(e) {
+                msg.innerText = "Error saving card."; msg.style.color = "var(--c-red-txt)";
+            }
+        };
+
+        // --- PERFORMANCE DASHBOARD ---
+        function getProgressBarHTML(cardsSubset) {
+            const total = cardsSubset.length;
+            if(total === 0) return `<div class="progress-bar-container"><div class="progress-bar"><div class="seg-wht" style="width:100%"></div></div><span class="progress-text">0</span></div>`;
+            
+            const g = cardsSubset.filter(c => c.status === 'green').length;
+            const a = cardsSubset.filter(c => c.status === 'amber').length;
+            const r = cardsSubset.filter(c => c.status === 'red').length;
+            const w = total - (g+a+r);
+            
+            return `
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div class="seg-grn" style="width:${(g/total)*100}%"></div>
+                    <div class="seg-amb" style="width:${(a/total)*100}%"></div>
+                    <div class="seg-red" style="width:${(r/total)*100}%"></div>
+                    <div class="seg-wht" style="width:${(w/total)*100}%"></div>
+                </div>
+                <span class="progress-text">${total}</span>
+            </div>`;
+        }
+
+        window.renderPerformanceLevel1 = () => {
+            const subj = document.getElementById('perf-subject').value;
+            document.getElementById('perf-title').innerText = `${subj} > Sections`;
+            
+            const perfCards = subj === 'All Subjects' ? rawAllCards : rawAllCards.filter(c => c.subject === subj);
+            const container = document.getElementById('perf-content');
+            const sections = [...new Set(perfCards.map(c => c.section))].sort();
+            
+            let html = '';
+            sections.forEach(sec => {
+                const secCards = perfCards.filter(c => c.section === sec);
+                html += `
+                <div class="perf-row" onclick="renderPerformanceLevel2('${sec.replace(/'/g, "\\'")}', '${subj.replace(/'/g, "\\'")}')">
+                    <div class="perf-title">📁 ${sec}</div>
+                    ${getProgressBarHTML(secCards)}
+                </div>`;
+            });
+            container.innerHTML = html || `<div style="font-size:12px; color:gray;">No cards in this subject yet.</div>`;
+        };
+
+        window.renderPerformanceLevel2 = (sectionName, subj) => {
+            document.getElementById('perf-title').innerHTML = `<span style="cursor:pointer;text-decoration:underline;" onclick="renderPerformanceLevel1()">Sections</span> > ${sectionName}`;
+            const container = document.getElementById('perf-content');
+            
+            const perfCards = subj === 'All Subjects' ? rawAllCards : rawAllCards.filter(c => c.subject === subj);
+            const topics = [...new Set(perfCards.filter(c => c.section === sectionName).map(c => c.topic))].sort();
+            
+            let html = '';
+            topics.forEach((top, i) => {
+                const topCards = perfCards.filter(c => c.section === sectionName && c.topic === top);
+                const subtopics = [...new Set(topCards.map(c => c.subtopic))].sort();
+                
+                let subsHtml = `<div class="topic-children hidden" id="children-${i}">`;
+                subtopics.forEach(sub => {
+                    const subCards = topCards.filter(c => c.subtopic === sub);
+                    const totalViews = subCards.reduce((sum, c) => sum + (c.views || 0), 0);
+                    subsHtml += `
+                    <div class="subtopic-row">
+                        <label>
+                            <input type="checkbox" onchange="toggleSubtopicSelection('${sub.replace(/'/g, "\\'")}')" ${selectedSubtopics.has(sub)?'checked':''}>
+                            ${sub}
+                        </label>
+                        <div class="subtopic-meta">
+                            <span>👁 ${totalViews}</span>
+                            ${getProgressBarHTML(subCards)}
+                        </div>
+                    </div>`;
+                });
+                subsHtml += `</div>`;
+                
+                html += `
+                <div>
+                    <div class="perf-row" onclick="toggleTopicAccordion(${i})">
+                        <div class="perf-title">📄 ${top}</div>
+                        ${getProgressBarHTML(topCards)}
+                    </div>
+                    ${subsHtml}
+                </div>`;
+            });
+            container.innerHTML = html;
+        };
+
+        window.toggleTopicAccordion = (index) => {
+            document.getElementById(`children-${index}`).classList.toggle('hidden');
+        };
+
+        window.toggleSubtopicSelection = (subtopic) => {
+            if(selectedSubtopics.has(subtopic)) selectedSubtopics.delete(subtopic);
+            else selectedSubtopics.add(subtopic);
+            updateFab();
+        };
+
+        function updateFab() {
+            const fab = document.getElementById('fab-start');
+            if(selectedSubtopics.size > 0) {
+                fab.style.display = 'block';
+                document.getElementById('fab-count').innerText = selectedSubtopics.size + " subtopics";
+            } else {
+                fab.style.display = 'none';
+            }
+        }
+
+        window.startCustomRevision = () => {
+            customSelectionMode = true;
+            isStudying = true;
+            studyQueue = rawAllCards.filter(c => selectedSubtopics.has(c.subtopic));
+            
+            currentCardIndex = 0;
+            sessionHistory = [];
+            
+            switchView('main-dashboard');
+            renderCurrentCard();
+        };
+
+    </script>
+</body>
+</html>
