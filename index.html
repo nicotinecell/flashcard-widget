@@ -65,12 +65,39 @@
             border-bottom: 1px solid var(--border);
             padding: 12px;
             position: relative;
+            transition: padding 0.3s;
         }
+        .toolbar-collapsed {
+            padding: 0 !important;
+            border-bottom: none !important;
+        }
+        .toolbar-collapsed .toolbar-grid {
+            display: none;
+        }
+        .minimizer-btn {
+            position: absolute;
+            bottom: -14px;
+            right: 20px;
+            width: 32px;
+            height: 14px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 0;
+            color: var(--text-muted);
+        }
+        .minimizer-btn:hover { background: var(--bg-hover); color: var(--text-main); }
         
         .toolbar-grid {
             display: grid;
             grid-template-columns: auto auto auto 1fr;
-            grid-template-rows: auto auto auto;
+            grid-template-rows: auto auto;
             gap: 6px 12px;
             align-items: center;
         }
@@ -85,7 +112,6 @@
 
         .filter-sec { grid-column: 4; grid-row: 1; }
         .filter-top { grid-column: 4; grid-row: 2; }
-        .filter-sub { grid-column: 4; grid-row: 3; }
         
         .filter-box select { width: 100%; }
         
@@ -170,7 +196,7 @@
         .vf-item-content { flex: 1; display: flex; flex-direction: column; gap: 4px; }
         .vf-item-meta { font-size: 10px; color: var(--text-muted); }
         .vf-item-date { font-size: 9px; color: var(--text-muted); opacity: 0.7; }
-        .vf-item-question { font-size: 12px; margin-top: 6px; color: var(--text-main); }
+        .vf-item-question { font-size: 12px; margin-top: 6px; color: var(--text-main); max-height: 40px; overflow: hidden; text-overflow: ellipsis; }
 
         .floating-actions {
             position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100;
@@ -182,8 +208,21 @@
         .header-with-back { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg-surface); }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 6px; font-weight: bold; letter-spacing: 0.5px; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; }
-        .form-group textarea { height: 80px; resize: vertical; }
+        .form-group input, .form-group select { width: 100%; }
+        
+        .rich-textarea {
+            background: var(--bg-main); color: var(--text-main); font-family: var(--font-mono);
+            border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+            font-size: 12px; outline: none; transition: border-color 0.2s;
+            min-height: 80px; overflow-y: auto; white-space: pre-wrap;
+        }
+        .rich-textarea:empty:before {
+            content: attr(placeholder);
+            color: var(--text-muted);
+            pointer-events: none;
+            display: block;
+        }
+        .rich-textarea img { max-width: 100%; height: auto; display: block; margin: 4px 0; border-radius: 4px; }
 
         /* Custom Select */
         .custom-select-wrapper { position: relative; width: 100%; }
@@ -228,14 +267,6 @@
         .seg-wht { background: var(--c-wht-txt); }
         .progress-text { font-size: 10px; color: var(--text-muted); width: 28px; text-align: right; }
 
-        .topic-children { padding-left: 16px; border-left: 1px solid var(--border); margin: 4px 0 12px 8px; }
-        .subtopic-row {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 8px 10px; font-size: 11px; color: var(--text-main);
-        }
-        .subtopic-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;}
-        .subtopic-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; align-items: center;}
-
         #fab-start {
             position: fixed; bottom: 20px; right: 20px; background: var(--text-main); color: var(--bg-main);
             padding: 10px 18px; border-radius: 20px; font-weight: bold; font-size: 12px; border: none;
@@ -249,13 +280,17 @@
 
     <!-- TOOLBAR (Main Dashboard) -->
     <div id="toolbar">
-        <div class="toolbar-grid">
+        <div class="toolbar-grid" id="toolbar-grid">
             <!-- Buttons -->
             <button class="btn-home nav-icon-btn" onclick="goHome()" title="Home">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
             </button>
             <button class="btn-cards nav-icon-btn" onclick="switchView('flashcards')" title="View Flashcards">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2" ry="2"></rect><line x1="3" y1="7" x2="21" y2="7"></line><rect x="7" y="11" width="10" height="10" rx="2" ry="2"></rect></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="10" width="12" height="12" rx="2"></rect>
+                    <path d="M6 6h10a2 2 0 0 1 2 2v10"></path>
+                    <path d="M10 2h10a2 2 0 0 1 2 2v10"></path>
+                </svg>
             </button>
             <button class="btn-back nav-icon-btn" onclick="goBack()" title="Go Back">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -288,17 +323,17 @@
                 </div>
             </div>
             
-            <!-- Sec, Top, Sub -->
+            <!-- Sec, Top -->
             <div class="filter-box filter-sec">
                 <select id="filter-section" onchange="handleSectionFilterChange()"><option value="all">All Sections</option></select>
             </div>
             <div class="filter-box filter-top">
                 <select id="filter-topic" onchange="handleTopicFilterChange()" disabled><option value="all">All Topics</option></select>
             </div>
-            <div class="filter-box filter-sub">
-                <select id="filter-subtopic" onchange="buildStudyQueue()" disabled><option value="all">All Subtopics</option></select>
-            </div>
         </div>
+        <button class="minimizer-btn" onclick="toggleToolbar()" title="Toggle Toolbar">
+            <svg id="minimizer-icon" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        </button>
     </div>
 
     <!-- MAIN CONTENT AREA -->
@@ -348,7 +383,6 @@
                 </select>
                 <select id="vf-filter-section" onchange="handleVfFilters()"><option value="all">All Sections</option></select>
                 <select id="vf-filter-topic" onchange="handleVfFilters()"><option value="all">All Topics</option></select>
-                <select id="vf-filter-subtopic" onchange="handleVfFilters()"><option value="all">All Subtopics</option></select>
                 
                 <div class="search-container">
                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color:var(--text-muted)"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -363,6 +397,11 @@
                 <button class="nav-icon-btn" onclick="goToCreate()" title="Add New Flashcard" style="margin-left: auto;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </button>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 8px; padding: 0 16px; margin-top: 8px;">
+                <input type="checkbox" id="vf-select-all" onchange="toggleSelectAllVf()">
+                <label for="vf-select-all" style="font-size: 11px; color: var(--text-muted); cursor: pointer;">Select All</label>
             </div>
             
             <div id="vf-list" class="vf-list-container"></div>
@@ -393,16 +432,18 @@
                     <button id="btn-delete-card" class="nav-icon-btn hidden" onclick="deleteCurrentCard()" title="Delete Card">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
-                    <button id="btn-save-card" class="nav-icon-btn" onclick="saveCard()" title="Save Card">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </button>
                 </div>
             </div>
             
-            <div style="max-width: 600px; margin: 0 auto; width: 100%; padding: 16px;">
-                <div class="form-group">
+            <div style="max-width: 600px; margin: 0 auto; width: 100%; padding: 16px; position: relative;">
+                <button id="btn-save-card" class="nav-icon-btn" onclick="saveCard()" title="Save Card" style="position: absolute; top: 16px; right: 16px; width: auto; padding: 6px 12px; font-weight: bold; background: var(--text-main); color: var(--bg-main); border-radius: 20px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Save Flashcard
+                </button>
+                
+                <div class="form-group" style="margin-top: 40px;">
                     <label>SUBJECT</label>
-                    <select id="create-subject" onchange="populateCustomSelect('sec'); populateCustomSelect('top'); populateCustomSelect('sub');">
+                    <select id="create-subject" onchange="populateCustomSelect('sec'); populateCustomSelect('top');">
                         <option value="Biology">Biology</option>
                         <option value="Psychology">Psychology</option>
                         <option value="Economics">Economics</option>
@@ -434,24 +475,12 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>SUBTOPIC</label>
-                    <div class="custom-select-wrapper">
-                        <div class="custom-select-display" id="cs-sub-display" onclick="toggleDropdown('cs-sub')">
-                            <span id="cs-sub-val">Select sub...</span>
-                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </div>
-                        <div class="custom-select-options hidden" id="cs-sub-options"></div>
-                        <input type="text" id="cs-sub-new" class="hidden" placeholder="Type new subtopic...">
-                    </div>
-                </div>
-                
-                <div class="form-group">
                     <label>QUESTION / CONCEPT (FRONT)</label>
-                    <textarea id="create-q" placeholder="What is the function of..."></textarea>
+                    <div id="create-q" contenteditable="true" class="rich-textarea" placeholder="What is the function of..."></div>
                 </div>
                 <div class="form-group">
                     <label>ANSWER / DETAIL (BACK)</label>
-                    <textarea id="create-a" placeholder="- Point 1&#10;- Point 2"></textarea>
+                    <div id="create-a" contenteditable="true" class="rich-textarea" placeholder="- Point 1&#10;- Point 2"></div>
                 </div>
             </div>
         </div>
@@ -468,7 +497,7 @@
                     </button>
                 </div>
                 <h3 id="perf-title" style="font-size: 14px; font-weight: 600;">Performance Overview</h3>
-                <select id="perf-subject" onchange="renderPerformanceLevel1()" style="margin-left:auto; width: 140px;">
+                <select id="perf-subject" onchange="renderPerformanceLevel1()" style="margin-left: 16px; width: 140px;">
                     <option value="All Subjects">All Subjects</option>
                     <option value="Biology">Biology</option>
                     <option value="Psychology">Psychology</option>
@@ -484,6 +513,17 @@
 
     <!-- Floating Action Button for Custom Multi-Select Revision -->
     <button id="fab-start" onclick="startCustomRevision()">Start Revision (<span id="fab-count">0</span>)</button>
+
+    <!-- Confirm Deletion Modal -->
+    <div id="confirm-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-surface); padding: 24px; border-radius: 8px; border: 1px solid var(--border); text-align: center; width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,0.8);">
+            <p id="confirm-msg" style="margin-bottom: 24px; font-size: 14px; line-height: 1.4;"></p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="closeConfirmModal()" style="padding: 8px 16px; flex: 1;">Cancel</button>
+                <button id="confirm-btn" style="padding: 8px 16px; flex: 1; background: var(--c-red-bg); color: var(--c-red-txt); border-color: var(--c-red-brd); font-weight: bold;">Delete</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ================= FIREBASE & APP LOGIC ================= -->
     <script type="module">
@@ -514,7 +554,7 @@
         let activeSubject = "All Subjects";
         
         let customSelectionMode = false;
-        let selectedSubtopics = new Set();
+        let selectedTopics = new Set();
         let isStudying = false; 
         
         let historyStack = [];
@@ -546,7 +586,8 @@
                 allCards = rawAllCards.filter(c => c.subject === activeSubject);
             }
             
-            updateFilterDropdowns();
+            // Decoupled from onchange events to prevent destroying active custom sessions
+            updateFilterDropdownsSilently();
             
             if (!isStudying) {
                 buildStudyQueue();
@@ -561,16 +602,44 @@
             document.getElementById('card-question').innerText = "Database connection error.";
         });
 
+        // --- CONFIRM MODAL LOGIC ---
+        let confirmAction = null;
+        window.showConfirm = (msg, action) => {
+            document.getElementById('confirm-msg').innerText = msg;
+            confirmAction = action;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        };
+        window.closeConfirmModal = () => {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmAction = null;
+        };
+        document.getElementById('confirm-btn').addEventListener('click', () => {
+            if (confirmAction) confirmAction();
+            closeConfirmModal();
+        });
+
         // --- NAVIGATION LOGIC ---
+        window.toggleToolbar = () => {
+            const tb = document.getElementById('toolbar');
+            tb.classList.toggle('toolbar-collapsed');
+            const icon = document.getElementById('minimizer-icon');
+            if (tb.classList.contains('toolbar-collapsed')) {
+                icon.innerHTML = '<polyline points="6 9 12 15 18 9"></polyline>';
+            } else {
+                icon.innerHTML = '<polyline points="18 15 12 9 6 15"></polyline>';
+            }
+        };
+
         window.goHome = () => {
             if (currentView === 'main-dashboard') {
                 document.getElementById('filter-subject').value = 'All Subjects';
                 document.querySelectorAll('#rank-dropdown input').forEach(cb => cb.checked = true);
                 document.getElementById('filter-section').value = 'all';
-                document.getElementById('filter-topic').value = 'all';
-                document.getElementById('filter-subtopic').value = 'all';
-                handleSubjectChange();
+                updateTopicDropdownSilently();
+                handleSubjectChange(); // This will reset everything and call buildStudyQueue(true)
             } else {
+                customSelectionMode = false;
+                isStudying = false;
                 switchView('main-dashboard');
             }
         };
@@ -600,7 +669,9 @@
             if(viewName === 'main-dashboard') {
                 document.getElementById('view-study').classList.remove('hidden');
                 document.getElementById('toolbar').style.display = 'block';
-                buildStudyQueue();
+                if (!customSelectionMode) {
+                    buildStudyQueue();
+                }
             } else {
                 document.getElementById('toolbar').style.display = 'none';
                 const viewEl = document.getElementById(`view-${viewName}`);
@@ -623,11 +694,11 @@
             } else {
                 allCards = rawAllCards.filter(c => c.subject === subj);
             }
-            updateFilterDropdowns();
+            updateFilterDropdownsSilently();
             buildStudyQueue(true);
         };
 
-        function updateFilterDropdowns() {
+        function updateFilterDropdownsSilently() {
             const secSelect = document.getElementById('filter-section');
             const currentVal = secSelect.value;
             const sections = [...new Set(allCards.map(c => c.section))].sort();
@@ -637,18 +708,16 @@
             if(sections.includes(currentVal)) secSelect.value = currentVal;
             else secSelect.value = 'all';
             
-            handleSectionFilterChange();
+            updateTopicDropdownSilently();
         }
 
-        window.handleSectionFilterChange = () => {
+        function updateTopicDropdownSilently() {
             const sec = document.getElementById('filter-section').value;
             const topSelect = document.getElementById('filter-topic');
-            const subSelect = document.getElementById('filter-subtopic');
             const currentTop = topSelect.value;
             
             if(sec === 'all') {
                 topSelect.disabled = true; topSelect.value = 'all';
-                subSelect.disabled = true; subSelect.value = 'all';
             } else {
                 topSelect.disabled = false;
                 const topics = [...new Set(allCards.filter(c => c.section === sec).map(c => c.topic))].sort();
@@ -656,28 +725,15 @@
                 topics.forEach(t => topSelect.innerHTML += `<option value="${t}">${t}</option>`);
                 if (topics.includes(currentTop)) topSelect.value = currentTop;
                 else topSelect.value = 'all';
-                
-                subSelect.disabled = true; subSelect.value = 'all';
             }
-            handleTopicFilterChange();
+        }
+
+        window.handleSectionFilterChange = () => {
+            updateTopicDropdownSilently();
+            buildStudyQueue();
         };
 
         window.handleTopicFilterChange = () => {
-            const sec = document.getElementById('filter-section').value;
-            const top = document.getElementById('filter-topic').value;
-            const subSelect = document.getElementById('filter-subtopic');
-            const currentSub = subSelect.value;
-            
-            if(top === 'all') {
-                subSelect.disabled = true; subSelect.value = 'all';
-            } else {
-                subSelect.disabled = false;
-                const subtopics = [...new Set(allCards.filter(c => c.section === sec && c.topic === top).map(c => c.subtopic))].sort();
-                subSelect.innerHTML = '<option value="all">All Subtopics</option>';
-                subtopics.forEach(s => subSelect.innerHTML += `<option value="${s}">${s}</option>`);
-                if (subtopics.includes(currentSub)) subSelect.value = currentSub;
-                else subSelect.value = 'all';
-            }
             buildStudyQueue();
         };
 
@@ -694,13 +750,11 @@
         window.buildStudyQueue = (forceReset = false) => {
             const fSec = document.getElementById('filter-section').value;
             const fTop = document.getElementById('filter-topic').value;
-            const fSub = document.getElementById('filter-subtopic').value;
             const selectedRanks = getSelectedRanks();
 
             const newQueue = allCards.filter(c => {
                 if(fSec !== 'all' && c.section !== fSec) return false;
                 if(fTop !== 'all' && c.topic !== fTop) return false;
-                if(fSub !== 'all' && c.subtopic !== fSub) return false;
                 
                 const st = c.status || 'unrated';
                 if(!selectedRanks.includes(st)) return false;
@@ -759,6 +813,9 @@
                             <button onclick="event.stopPropagation(); reviewSessionCards('hard_ok_skipped')" style="background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border); padding: 8px 12px; font-weight: bold; width: 100%;">
                                 🔄 Review Hard, OK & Skipped (${hardOkSkippedCount})
                             </button>
+                            <button onclick="event.stopPropagation(); goHome()" style="background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); padding: 8px 12px; font-weight: bold; width: 100%;">
+                                ✅ Finish
+                            </button>
                         </div>
                     </div>
                 `;
@@ -773,11 +830,11 @@
 
             const card = studyQueue[currentCardIndex];
             stats.innerText = `Card ${currentCardIndex + 1} of ${studyQueue.length}`;
-            qEl.innerText = card.question;
-            aEl.innerText = card.answer;
+            qEl.innerHTML = card.question;
+            aEl.innerHTML = card.answer;
             
-            document.getElementById('card-front-meta').innerText = `${card.subject} > ${card.section} > ${card.topic} > ${card.subtopic}`;
-            document.getElementById('card-back-meta').innerText = `${card.subtopic}`;
+            document.getElementById('card-front-meta').innerText = `${card.subject} > ${card.section} > ${card.topic}`;
+            document.getElementById('card-back-meta').innerText = `${card.topic}`;
             
             const badge = document.getElementById('card-front-status');
             const stat = card.status || 'unrated';
@@ -789,7 +846,7 @@
 
         window.flipCard = (event) => {
             if(studyQueue.length === 0 || currentCardIndex >= studyQueue.length) return;
-            if(event && event.target.tagName === 'BUTTON') return;
+            if(event && event.target.closest('button')) return;
             
             const card = document.getElementById('flashcard');
             card.classList.toggle('flipped');
@@ -810,10 +867,14 @@
             
             const cardRef = doc(db, "flashcards", card.id);
             const newViews = (card.views || 0) + 1;
+            const now = new Date().toISOString();
+            const newHistory = card.reviewHistory ? [...card.reviewHistory, now] : [now];
+            
             card.status = status;
             card.views = newViews;
+            card.reviewHistory = newHistory;
             
-            updateDoc(cardRef, { status: status, views: newViews, lastReviewed: new Date().toISOString() })
+            updateDoc(cardRef, { status: status, views: newViews, lastReviewed: now, reviewHistory: newHistory })
                 .catch(e => console.error("Update failed", e));
             
             currentCardIndex++;
@@ -845,6 +906,7 @@
             sessionHistory = [];
             currentCardIndex = 0;
             isStudying = true;
+            customSelectionMode = true; // Protects this session from background sync resets
             renderCurrentCard();
         };
 
@@ -875,7 +937,6 @@
             
             const sections = ['all', ...new Set(cards.map(c => c.section))].sort();
             const topics = ['all', ...new Set(cards.filter(c => sec === 'all' || c.section === sec).map(c => c.topic))].sort();
-            const subtopics = ['all', ...new Set(cards.filter(c => (sec === 'all' || c.section === sec) && (top === 'all' || c.topic === top)).map(c => c.subtopic))].sort();
             
             const updateSelect = (id, options, currentVal) => {
                 const el = document.getElementById(id);
@@ -886,7 +947,6 @@
             
             updateSelect('vf-filter-section', sections, sec);
             updateSelect('vf-filter-topic', topics, top);
-            updateSelect('vf-filter-subtopic', subtopics, document.getElementById('vf-filter-subtopic').value);
         };
 
         window.handleVfFilters = () => {
@@ -900,25 +960,27 @@
             const searchStr = document.getElementById('vf-search').value.toLowerCase();
             const searchQA = document.getElementById('vf-search-qa').checked;
             
+            // Cache currently selected IDs to prevent losing selection on live sync
+            const selectedIds = Array.from(document.querySelectorAll('.vf-select-cb:checked')).map(cb => cb.value);
+            
             const fSubj = document.getElementById('vf-filter-subject').value;
             const fSec = document.getElementById('vf-filter-section').value;
             const fTop = document.getElementById('vf-filter-topic').value;
-            const fSub = document.getElementById('vf-filter-subtopic').value;
             
             let filtered = rawAllCards.filter(c => {
                 if (fSubj !== 'All Subjects' && c.subject !== fSubj) return false;
                 if (fSec !== 'all' && c.section !== fSec) return false;
                 if (fTop !== 'all' && c.topic !== fTop) return false;
-                if (fSub !== 'all' && c.subtopic !== fSub) return false;
                 
                 if (searchStr) {
+                    const qText = (c.question || '').replace(/<[^>]*>?/gm, '').toLowerCase();
+                    const aText = (c.answer || '').replace(/<[^>]*>?/gm, '').toLowerCase();
                     if (searchQA) {
-                        if (!c.question.toLowerCase().includes(searchStr) && !c.answer.toLowerCase().includes(searchStr)) return false;
+                        if (!qText.includes(searchStr) && !aText.includes(searchStr)) return false;
                     } else {
                         if (!c.subject.toLowerCase().includes(searchStr) && 
                             !c.section.toLowerCase().includes(searchStr) && 
-                            !c.topic.toLowerCase().includes(searchStr) && 
-                            !c.subtopic.toLowerCase().includes(searchStr)) return false;
+                            !c.topic.toLowerCase().includes(searchStr)) return false;
                     }
                 }
                 return true;
@@ -926,10 +988,9 @@
             
             let groupCounts = {};
             let cardNumbers = {};
-            // Safe fallback for missing createdAt timestamps to prevent NaN sorting errors
             let sortedAsc = [...rawAllCards].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
             sortedAsc.forEach(c => {
-                let key = `${c.subject}-${c.section}-${c.topic}-${c.subtopic}`;
+                let key = `${c.subject}-${c.section}-${c.topic}`;
                 if (!groupCounts[key]) groupCounts[key] = 0;
                 groupCounts[key]++;
                 cardNumbers[c.id] = groupCounts[key];
@@ -941,38 +1002,61 @@
             filtered.forEach(c => {
                 const dateStr = new Date(c.createdAt || 0).toLocaleString([], {year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'});
                 const num = cardNumbers[c.id];
+                const displayQ = (c.question || '').replace(/<img[^>]*>/g, '[Image]').replace(/<[^>]*>?/gm, '');
                 html += `
                 <div class="vf-list-item" onclick="editCard('${c.id}')">
                     <input type="checkbox" class="vf-select-cb" value="${c.id}" onclick="event.stopPropagation(); updateVfSelection()">
                     <div class="vf-item-content">
-                        <div class="vf-item-meta">(${num}) ${c.subject} > ${c.section} > ${c.topic} > ${c.subtopic}</div>
+                        <div class="vf-item-meta">(${num}) ${c.subject} > ${c.section} > ${c.topic}</div>
                         <div class="vf-item-date">${dateStr}</div>
-                        ${showQ ? `<div class="vf-item-question">${c.question}</div>` : ''}
+                        ${showQ ? `<div class="vf-item-question">${displayQ}</div>` : ''}
                     </div>
                 </div>`;
             });
             
             container.innerHTML = html || '<div style="padding:16px; color:gray; font-size:12px;">No flashcards found.</div>';
+            
+            // Restore selections
+            if (selectedIds.length > 0) {
+                document.querySelectorAll('.vf-select-cb').forEach(cb => {
+                    if (selectedIds.includes(cb.value)) cb.checked = true;
+                });
+            }
+            
+            updateVfSelection();
+        };
+
+        window.toggleSelectAllVf = () => {
+            const isChecked = document.getElementById('vf-select-all').checked;
+            document.querySelectorAll('.vf-select-cb').forEach(cb => cb.checked = isChecked);
             updateVfSelection();
         };
 
         window.updateVfSelection = () => {
-            const checked = document.querySelectorAll('.vf-select-cb:checked').length;
+            const checkboxes = document.querySelectorAll('.vf-select-cb');
+            const checked = document.querySelectorAll('.vf-select-cb:checked');
             const actions = document.getElementById('vf-actions');
-            if (checked > 0) actions.classList.remove('hidden');
+            
+            if (checkboxes.length > 0 && checkboxes.length === checked.length) {
+                document.getElementById('vf-select-all').checked = true;
+            } else {
+                document.getElementById('vf-select-all').checked = false;
+            }
+            
+            if (checked.length > 0) actions.classList.remove('hidden');
             else actions.classList.add('hidden');
         };
 
-        window.deleteSelectedVfCards = async () => {
+        window.deleteSelectedVfCards = () => {
             const checkboxes = document.querySelectorAll('.vf-select-cb:checked');
             if (checkboxes.length === 0) return;
             
-            if (confirm(`Are you sure you want to delete ${checkboxes.length} flashcard(s)?`)) {
+            showConfirm(`Are you sure you want to delete ${checkboxes.length} flashcard(s)?`, async () => {
                 for (let cb of checkboxes) {
                     await deleteDoc(doc(db, "flashcards", cb.value));
                 }
                 renderVfList();
-            }
+            });
         };
 
         window.startRevisionFromVf = () => {
@@ -998,12 +1082,11 @@
             document.getElementById('btn-delete-card').classList.add('hidden');
             document.getElementById('create-msg').innerText = "";
             
-            document.getElementById('create-q').value = '';
-            document.getElementById('create-a').value = '';
+            document.getElementById('create-q').innerHTML = '';
+            document.getElementById('create-a').innerHTML = '';
             
             setCustomSelect('sec', '');
             setCustomSelect('top', '');
-            setCustomSelect('sub', '');
             
             switchView('create');
         };
@@ -1020,33 +1103,31 @@
             
             setCustomSelect('sec', card.section);
             setCustomSelect('top', card.topic);
-            setCustomSelect('sub', card.subtopic);
             
-            document.getElementById('create-q').value = card.question;
-            document.getElementById('create-a').value = card.answer;
+            document.getElementById('create-q').innerHTML = card.question;
+            document.getElementById('create-a').innerHTML = card.answer;
             
             switchView('create');
         };
 
-        window.deleteCurrentCard = async () => {
-            if (confirm("Are you sure you want to delete this flashcard?")) {
+        window.deleteCurrentCard = () => {
+            showConfirm("Are you sure you want to delete this flashcard?", async () => {
                 try {
                     await deleteDoc(doc(db, "flashcards", editingCardId));
                     goBack();
                 } catch(e) {
                     alert("Error deleting card.");
                 }
-            }
+            });
         };
 
         // Custom Select Logic
-        function getAvailableOptions(type, subject, section, topic) {
+        function getAvailableOptions(type, subject, section) {
             let options = new Set();
             rawAllCards.forEach(c => {
                 if (c.subject !== subject) return;
                 if (type === 'sec') options.add(c.section);
                 else if (type === 'top') { if (c.section === section) options.add(c.topic); }
-                else if (type === 'sub') { if (c.section === section && c.topic === topic) options.add(c.subtopic); }
             });
             return Array.from(options).filter(opt => !hiddenCategories.some(h => h.type === type && h.value === opt)).sort();
         }
@@ -1054,9 +1135,8 @@
         window.populateCustomSelect = (type) => {
             const subj = document.getElementById('create-subject').value;
             const sec = getCustomSelectVal('sec');
-            const top = getCustomSelectVal('top');
             
-            const options = getAvailableOptions(type, subj, sec, top);
+            const options = getAvailableOptions(type, subj, sec);
             const container = document.getElementById(`cs-${type}-options`);
             
             let html = `<div class="cs-option" onclick="selectCS('${type}', 'NEW')"><span style="color:var(--c-grn-txt); font-weight:bold;">+ Add New</span></div>`;
@@ -1074,11 +1154,11 @@
 
         window.hideCSOption = (type, val, event) => {
             event.stopPropagation();
-            if (confirm(`Remove "${val}" from dropdown options? (Existing flashcards won't be deleted)`)) {
+            showConfirm(`Remove "${val}" from dropdown options? (Existing flashcards won't be deleted)`, () => {
                 hiddenCategories.push({type, value: val});
                 localStorage.setItem('hiddenCategories', JSON.stringify(hiddenCategories));
                 populateCustomSelect(type);
-            }
+            });
         };
 
         window.selectCS = (type, val) => {
@@ -1095,8 +1175,7 @@
                 document.getElementById(`cs-${type}-val`).innerText = val;
             }
             
-            if (type === 'sec') { setCustomSelect('top', ''); setCustomSelect('sub', ''); }
-            if (type === 'top') { setCustomSelect('sub', ''); }
+            if (type === 'sec') { setCustomSelect('top', ''); }
         };
 
         window.getCustomSelectVal = (type) => {
@@ -1113,9 +1192,8 @@
                 document.getElementById(`cs-${type}-new`).value = '';
             } else {
                 const subj = document.getElementById('create-subject').value;
-                const sec = type === 'top' || type === 'sub' ? getCustomSelectVal('sec') : null;
-                const top = type === 'sub' ? getCustomSelectVal('top') : null;
-                const opts = getAvailableOptions(type, subj, sec, top);
+                const sec = type === 'top' ? getCustomSelectVal('sec') : null;
+                const opts = getAvailableOptions(type, subj, sec);
                 
                 if (opts.includes(val)) {
                     document.getElementById(`cs-${type}-val`).innerText = val;
@@ -1132,8 +1210,7 @@
         };
 
         window.handleCustomInput = (type) => {
-            if (type === 'sec') { setCustomSelect('top', ''); setCustomSelect('sub', ''); }
-            if (type === 'top') { setCustomSelect('sub', ''); }
+            if (type === 'sec') { setCustomSelect('top', ''); }
         };
 
         window.toggleDropdown = (id) => {
@@ -1156,12 +1233,11 @@
             const subj = document.getElementById('create-subject').value;
             const sec = getCustomSelectVal('sec');
             const top = getCustomSelectVal('top');
-            const sub = getCustomSelectVal('sub');
-            const q = document.getElementById('create-q').value.trim();
-            const a = document.getElementById('create-a').value.trim();
+            const q = document.getElementById('create-q').innerHTML.trim();
+            const a = document.getElementById('create-a').innerHTML.trim();
             const msg = document.getElementById('create-msg');
             
-            if(!sec || !top || !sub || !q || !a) {
+            if(!sec || !top || !q || !a) {
                 msg.innerText = "Error: Fill all fields."; msg.style.color = "var(--c-red-txt)"; return;
             }
             
@@ -1171,20 +1247,20 @@
                 if (editingCardId) {
                     const cardRef = doc(db, "flashcards", editingCardId);
                     await updateDoc(cardRef, {
-                        subject: subj, section: sec, topic: top, subtopic: sub,
+                        subject: subj, section: sec, topic: top,
                         question: q, answer: a
                     });
                     msg.innerHTML = "Saved! ✔️"; msg.style.color = "var(--c-grn-txt)";
                     setTimeout(() => goBack(), 800);
                 } else {
                     await addDoc(collection(db, "flashcards"), {
-                        subject: subj, section: sec, topic: top, subtopic: sub,
+                        subject: subj, section: sec, topic: top,
                         question: q, answer: a, status: "unrated", views: 0,
                         createdAt: new Date().toISOString()
                     });
                     msg.innerHTML = "Saved! ✔️ Add another."; msg.style.color = "var(--c-grn-txt)";
-                    document.getElementById('create-q').value = "";
-                    document.getElementById('create-a').value = "";
+                    document.getElementById('create-q').innerHTML = "";
+                    document.getElementById('create-a').innerHTML = "";
                     document.getElementById('create-q').focus();
                 }
             } catch(e) {
@@ -1215,14 +1291,51 @@
         }
 
         window.renderPerformanceLevel1 = () => {
+            selectedTopics.clear();
+            updateFab();
+            
             const subj = document.getElementById('perf-subject').value;
             document.getElementById('perf-title').innerText = `${subj} > Sections`;
             
             const perfCards = subj === 'All Subjects' ? rawAllCards : rawAllCards.filter(c => c.subject === subj);
             const container = document.getElementById('perf-content');
-            const sections = [...new Set(perfCards.map(c => c.section))].sort();
             
-            let html = '';
+            let total = 0, month = 0, week = 0;
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            
+            perfCards.forEach(c => {
+                if (c.reviewHistory) {
+                    c.reviewHistory.forEach(ts => {
+                        total++;
+                        const d = new Date(ts);
+                        if (d >= startOfMonth) month++;
+                        if (d >= oneWeekAgo) week++;
+                    });
+                } else if (c.views > 0) {
+                    total += c.views;
+                }
+            });
+            
+            let html = `
+            <div style="display: flex; gap: 16px; margin-bottom: 16px; background: var(--bg-surface); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Total Viewed</div>
+                    <div style="font-size: 18px; font-weight: bold; color: var(--text-main);">${total}</div>
+                </div>
+                <div style="flex: 1; text-align: center; border-left: 1px solid var(--border);">
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">This Month</div>
+                    <div style="font-size: 18px; font-weight: bold; color: var(--text-main);">${month}</div>
+                </div>
+                <div style="flex: 1; text-align: center; border-left: 1px solid var(--border);">
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">This Week</div>
+                    <div style="font-size: 18px; font-weight: bold; color: var(--text-main);">${week}</div>
+                </div>
+            </div>
+            `;
+            
+            const sections = [...new Set(perfCards.map(c => c.section))].sort();
             sections.forEach(sec => {
                 const secCards = perfCards.filter(c => c.section === sec);
                 html += `
@@ -1244,53 +1357,34 @@
             let html = '';
             topics.forEach((top, i) => {
                 const topCards = perfCards.filter(c => c.section === sectionName && c.topic === top);
-                const subtopics = [...new Set(topCards.map(c => c.subtopic))].sort();
-                
-                let subsHtml = `<div class="topic-children hidden" id="children-${i}">`;
-                subtopics.forEach(sub => {
-                    const subCards = topCards.filter(c => c.subtopic === sub);
-                    const totalViews = subCards.reduce((sum, c) => sum + (c.views || 0), 0);
-                    subsHtml += `
-                    <div class="subtopic-row">
-                        <label>
-                            <input type="checkbox" onchange="toggleSubtopicSelection('${sub.replace(/'/g, "\\'")}')" ${selectedSubtopics.has(sub)?'checked':''}>
-                            ${sub}
-                        </label>
-                        <div class="subtopic-meta">
-                            <span>👁 ${totalViews}</span>
-                            ${getProgressBarHTML(subCards)}
-                        </div>
-                    </div>`;
-                });
-                subsHtml += `</div>`;
+                const totalViews = topCards.reduce((sum, c) => sum + (c.views || 0), 0);
                 
                 html += `
-                <div>
-                    <div class="perf-row" onclick="toggleTopicAccordion(${i})">
+                <div class="perf-row">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;">
+                        <input type="checkbox" onchange="toggleTopicSelection('${sectionName.replace(/'/g, "\\'")}|${top.replace(/'/g, "\\'")}')" ${selectedTopics.has(`${sectionName}|${top}`)?'checked':''}>
                         <div class="perf-title">📄 ${top}</div>
+                    </label>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <span style="font-size: 10px; color: var(--text-muted);">👁 ${totalViews}</span>
                         ${getProgressBarHTML(topCards)}
                     </div>
-                    ${subsHtml}
                 </div>`;
             });
             container.innerHTML = html;
         };
 
-        window.toggleTopicAccordion = (index) => {
-            document.getElementById(`children-${index}`).classList.toggle('hidden');
-        };
-
-        window.toggleSubtopicSelection = (subtopic) => {
-            if(selectedSubtopics.has(subtopic)) selectedSubtopics.delete(subtopic);
-            else selectedSubtopics.add(subtopic);
+        window.toggleTopicSelection = (topicKey) => {
+            if(selectedTopics.has(topicKey)) selectedTopics.delete(topicKey);
+            else selectedTopics.add(topicKey);
             updateFab();
         };
 
         function updateFab() {
             const fab = document.getElementById('fab-start');
-            if(selectedSubtopics.size > 0) {
+            if(selectedTopics.size > 0) {
                 fab.style.display = 'block';
-                document.getElementById('fab-count').innerText = selectedSubtopics.size + " subtopics";
+                document.getElementById('fab-count').innerText = selectedTopics.size + " topics";
             } else {
                 fab.style.display = 'none';
             }
@@ -1299,7 +1393,7 @@
         window.startCustomRevision = () => {
             customSelectionMode = true;
             isStudying = true;
-            studyQueue = rawAllCards.filter(c => selectedSubtopics.has(c.subtopic));
+            studyQueue = rawAllCards.filter(c => selectedTopics.has(`${c.section}|${c.topic}`));
             
             currentCardIndex = 0;
             sessionHistory = [];
@@ -1307,6 +1401,47 @@
             switchView('main-dashboard');
             renderCurrentCard();
         };
+
+        // Handle Image Pasting in Rich Text Areas (Vanilla JS Compliant)
+        function handlePaste(e) {
+            const clipboardData = e.clipboardData || window.clipboardData;
+            if (!clipboardData) return;
+            const items = clipboardData.items;
+            
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.type.indexOf('image') !== -1) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const img = document.createElement('img');
+                        img.src = event.target.result;
+                        img.style.maxWidth = '100%';
+                        img.style.borderRadius = '4px';
+                        img.style.marginTop = '8px';
+                        
+                        const selection = window.getSelection();
+                        if (!selection.rangeCount) {
+                            e.target.appendChild(img);
+                            return;
+                        }
+                        selection.deleteFromDocument();
+                        selection.getRangeAt(0).insertNode(img);
+                        
+                        // Move cursor after image
+                        const range = document.createRange();
+                        range.setStartAfter(img);
+                        range.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    };
+                    reader.readAsDataURL(blob);
+                    e.preventDefault();
+                }
+            }
+        }
+        document.getElementById('create-q').addEventListener('paste', handlePaste);
+        document.getElementById('create-a').addEventListener('paste', handlePaste);
 
     </script>
 </body>
